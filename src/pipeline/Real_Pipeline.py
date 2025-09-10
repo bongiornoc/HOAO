@@ -5,7 +5,7 @@ import pickle as pk
 import joblib
 import time
 import scipy.stats as st
-from core.Sampler import WindowBitsetSampler
+from .Sampler import WindowBitsetSampler
 
 def fetch_stock_returns(file_experiment=None,experiment=None,returns_df=None, prices_df=None, split_factor_df=None, rng=None, annualize=False,shuffle=False, shift=1):
     """
@@ -168,14 +168,15 @@ def generate_real_test_dataset(data_params,validation_steps):
     return dataset_test
     
 
-def prepare_dataset(n_days, n_days_out, real_db_name, datatime_range, annualize=True, 
+def prepare_dataset(filename_returns, filename_available_stocks, n_days, n_days_out,  datatime_range, annualize=True, 
                     shift=1, calibration=True, top=None, include_sic=False):
     """
     Prepares the dataset for the given parameters.
     Parameters:
+    filename_returns (str): Path to the file containing stock returns data.
+    filename_available_stocks (str): Path to the file containing available stocks data.
     n_days (int): Number of days to include before the target date.
     n_days_out (int): Number of days to include after the target date.
-    real_db_name (str): Name of the real database to load data from.
     datatime_range (tuple): A tuple containing the start and end dates (d0, d1) for the data selection.
     annualize (bool, optional): Whether to annualize the returns. Defaults to True.
     shift (int optional): Number of days to shift the output data. Defaults to 1.
@@ -190,12 +191,12 @@ def prepare_dataset(n_days, n_days_out, real_db_name, datatime_range, annualize=
     # if shift!=1:
     #     raise ValueError("Shift different than 1 is not supported.")
 
-    bundle = joblib.load(f'DATA/Real/processed/vanilla_returns_{real_db_name}.joblib',mmap_mode='r')
+    bundle = joblib.load(filename_returns,mmap_mode='r')
     returns = bundle.returns
     if include_sic:
         sic = bundle.sic.loc[:, returns.columns]
         
-    with open(f'DATA/Real/available_stocks/dtin_{n_days}_dtout_{5}_shift_{shift}_Db_{real_db_name}.pkl', 'rb') as f:
+    with open(filename_available_stocks, 'rb') as f:
         preprocessed = pk.load(f)
     
     # Filter available days
@@ -254,16 +255,18 @@ def prepare_dataset(n_days, n_days_out, real_db_name, datatime_range, annualize=
             sic.columns = [s.replace('permno','index') for s in sic.columns]
             return returns, available_stocks, sic
 
-def real_data_pipeline(batch_size, n_days, n_days_out, real_db_name, 
-                       datatime_range, n_stocks=None, n_stocks_range=None, n_days_range=None, annualize=True, shuffle=False, shift=0,
-                       scale_covariance_output=False, target_return=None, sequential=False, rng = np.random.default_rng(), oos_covariance=True, include_sic=False, return_generator=False, **kwargs):
+def real_data_pipeline(batch_size, n_days, n_days_out, filename_returns, filename_available_stocks ,
+                       datatime_range, n_stocks=None, n_stocks_range=None, n_days_range=None, annualize=False, shuffle=False, shift=0,
+                       scale_covariance_output=False, target_return=None, sequential=False, rng = np.random.default_rng(), 
+                       oos_covariance=True, include_sic=False, return_generator=True, **kwargs):
     """
     Generates a dataset for real data pipeline based on the given parameters.
     Parameters:
     batch_size (int): The size of each batch of data.
     n_days (int): The number of days of historical data to include in each sample.
-    n_days_out (int): The number of days to predict.
-    real_db_name (str): The name of the real database to use.
+    n_days_out (int): The number of days to predict.\
+    filename_returns (str): Path to the file containing stock returns data.
+    filename_available_stocks (str): Path to the file containing available stocks data.
     datatime_range (tuple): A tuple containing the start and end dates for the data.
     n_stocks (int, optional): The number of stocks to include in each sample. Defaults to None.
     n_stocks_range (tuple, optional): A tuple containing the range of stocks to include. Defaults to None.
@@ -275,9 +278,9 @@ def real_data_pipeline(batch_size, n_days, n_days_out, real_db_name,
     Returns:
     tuple: A tuple containing the dataset and an empty list.
     """
-    
-    
-    historicalData, available_stocks, sic = prepare_dataset(n_days=n_days, n_days_out=n_days_out, real_db_name=real_db_name,
+
+
+    historicalData, available_stocks, sic = prepare_dataset(filename_returns=filename_returns, filename_available_stocks=filename_available_stocks, n_days=n_days, n_days_out=n_days_out,
                                                        datatime_range=datatime_range, annualize=annualize, shift=shift, include_sic=include_sic)
     
     
@@ -287,7 +290,7 @@ def real_data_pipeline(batch_size, n_days, n_days_out, real_db_name,
                                  target_return=target_return, n_days_range=n_days_range, sequential=sequential, oos_covariance=oos_covariance,sic=sic, 
                                  return_generator=return_generator, annualized=annualize)
     
-    return dataset, []
+    return dataset
     
     
 def real_data_producer(batch_size, n_days_in, n_days_out, historicalData, available_stocks, rng=None,
