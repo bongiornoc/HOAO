@@ -204,7 +204,7 @@ def media_core_cokurtosi_tf(rin, rout, r=None, standardizza=True, chunk=None, dt
 
     tf.debugging.assert_rank(rin, 3, message="rin deve essere (B,N,T).")
     tf.debugging.assert_rank(rout, 3, message="rout deve essere (B,N,T).")
-    tf.debugging.assert_equal(tf.shape(rin), tf.shape(rout), message="rin e rout devono avere la stessa shape.")
+    tf.debugging.assert_equal(tf.shape(rin)[:2], tf.shape(rout)[:2], message="rin e rout devono avere la stessa shape.")
 
     B = tf.shape(rin)[0]
     N = tf.shape(rin)[1]
