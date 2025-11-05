@@ -215,7 +215,7 @@ def media_core_cokurtosi_tf(rin, rout, r=None, standardizza=True, chunk=None, dt
         C_in = cokurtosi_tensore_tf(X_in, standardizza=standardizza, chunk=chunk, dtype=dtype)
         _, U  = tucker_simmetrico_tf(C_in, r=r, dtype=dtype, return_fattori=True)
         C_out = cokurtosi_tensore_tf(X_out, standardizza=standardizza, chunk=chunk, dtype=dtype)
-        G_out = core_da_fattori_tf(C_out, U, metodo="sequenziale")
+        G_out = core_da_fattori_tf(C_out, tf.transpose(U,[1,0]), metodo="sequenziale")
         return G_out
 
     # Accumula sui batch (usa tensorflow per il corpo pesante)
